@@ -66,3 +66,4 @@ app.view.style.height = '100%';
 app.resizeTo = window;
 
 new Menu(app);
+

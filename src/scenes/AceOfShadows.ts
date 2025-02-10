@@ -9,10 +9,8 @@ export class AceOfShadows {
     constructor(app: PIXI.Application) {
         this.app = app;
         this.stacks = [];
-
         // Set a dark background for better contrast
         this.app.renderer.background.color = 0x000000; // Black background
-
         this.initStacks();
         this.animateCards();
     }
@@ -20,41 +18,65 @@ export class AceOfShadows {
     private initStacks() {
         const numStacks = 12; // Number of stacks
         const cardsPerStack = 12; // Number of cards per stack
-
+    
         // Make card sizes responsive based on screen dimensions
         const cardWidth = Math.min(100, this.app.screen.width * 0.08); // Adjusted width
         const cardHeight = Math.min(150, this.app.screen.height * 0.15); // Adjusted height
-
-        // Set the padding to prevent stacks from spawning outside the screen
-        const padding = 20;
-        const maxX = this.app.screen.width - cardWidth - padding;
-        const maxY = this.app.screen.height - cardHeight - padding;
-
+    
+        // Padding around the screen edges
+        const paddingX = this.app.screen.width * 0.05;
+        const paddingY = this.app.screen.height * 0.05;
+    
+        // Minimum distance between stacks (to prevent overlap)
+        const minDistance = Math.max(cardWidth, cardHeight) * 1.5;
+    
+        // Array to store stack positions for collision detection
+        const stackPositions: { x: number; y: number }[] = [];
+    
         for (let i = 0; i < numStacks; i++) {
-            // Randomize stack positions within the screen bounds
-            const stackPosition = {
-                x: Math.random() * maxX + padding, // Random X within screen bounds
-                y: Math.random() * maxY + padding, // Random Y within screen bounds
-            };
-
+            let stackPosition: { x: number; y: number } = { x: 0, y: 0 }; // Initialize with default values
+            let isValidPosition = false;
+    
+            // Retry mechanism to find a valid position
+            while (!isValidPosition) {
+                // Generate a random position within the screen bounds
+                stackPosition = {
+                    x: Math.random() * (this.app.screen.width - cardWidth - 2 * paddingX) + paddingX,
+                    y: Math.random() * (this.app.screen.height - cardHeight - 2 * paddingY) + paddingY,
+                };
+    
+                // Check for collisions with existing stacks
+                isValidPosition = true;
+                for (const pos of stackPositions) {
+                    const distance = Math.hypot(stackPosition.x - pos.x, stackPosition.y - pos.y);
+                    if (distance < minDistance) {
+                        isValidPosition = false;
+                        break;
+                    }
+                }
+            }
+    
+            // Add the valid position to the list
+            stackPositions.push(stackPosition);
+    
+            // Create the stack of cards
             const stack: PIXI.Graphics[] = [];
             for (let j = 0; j < cardsPerStack; j++) {
                 const card = new PIXI.Graphics();
-
                 // Set the border style
                 card.lineStyle(2, 0xFFFFFF, 1); // White border with thickness 2
-
                 // Use vibrant colors for the cards
                 const color = this.getRandomCardColor();
                 card.beginFill(color);
                 card.drawRect(0, 0, cardWidth, cardHeight);
                 card.endFill();
-
+    
                 // Position the cards in the stack with overlap
                 card.x = stackPosition.x;
-                card.y = stackPosition.y + j * (cardHeight * 0.6); // Overlap cards slightly
+                card.y = stackPosition.y + j * (cardHeight * 0.1); // Overlap cards slightly
                 card.scale.set(1);
-
+    
+                // Add the card to the stage (ensures proper rendering order)
                 this.app.stage.addChild(card);
                 stack.push(card);
             }
@@ -83,7 +105,7 @@ export class AceOfShadows {
             // Calculate the target position
             const targetPosition = {
                 x: this.stacks[targetIndex][0].x,
-                y: this.stacks[targetIndex][0].y + targetStack.length * (card.height * 0.6),
+                y: this.stacks[targetIndex][0].y + targetStack.length * (card.height * 0.1), // Overlap cards slightly
             };
 
             // Animate the card moving to the target stack
