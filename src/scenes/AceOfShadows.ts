@@ -68,39 +68,33 @@ export class AceOfShadows {
             if (now - this.lastAnimationTime < this.animationInterval) return;
             this.lastAnimationTime = now;
     
-            // Find a source stack with cards
             let sourceIndex = Math.floor(Math.random() * this.stacks.length);
             while (this.stacks[sourceIndex].locked || this.stacks[sourceIndex].cards.length === 0) {
                 sourceIndex = Math.floor(Math.random() * this.stacks.length);
             }
             const sourceStack = this.stacks[sourceIndex];
     
-            // Pop a card from the source stack
             const card = sourceStack.cards.pop();
             if (!card) return;
     
-            // Find a target stack that is not the source stack and not locked
             let targetIndex = Math.floor(Math.random() * this.stacks.length);
             while (targetIndex === sourceIndex || this.stacks[targetIndex].locked) {
                 targetIndex = Math.floor(Math.random() * this.stacks.length);
             }
             const targetStack = this.stacks[targetIndex];
     
-            // Lock the target stack during the animation
             targetStack.locked = true;
     
-            // Calculate the target position
             const overlapFactor = 0.1;
             const targetPosition = {
                 x: targetStack.cards.length > 0
-                    ? targetStack.cards[0].x // Use the x position of the first card in the target stack
-                    : card.x, // Use the x position of the card if the target stack is empty
+                    ? targetStack.cards[0].x 
+                    : card.x,
                 y: targetStack.cards.length > 0
-                    ? targetStack.cards[0].y + targetStack.cards.length * (card.height * overlapFactor) // Stack on top of existing cards
-                    : card.y, // Use the y position of the card if the target stack is empty
+                    ? targetStack.cards[0].y + targetStack.cards.length * (card.height * overlapFactor) 
+                    : card.y, 
             };
     
-            // Animate the card to the target position
             const tween = gsap.to(card, {
                 duration: 0.1,
                 x: targetPosition.x,
@@ -113,7 +107,6 @@ export class AceOfShadows {
                     targetStack.cards.push(card);
                     targetStack.locked = false;
     
-                    // Remove the tween from the active tweens list
                     const index = this.activeTweens.indexOf(tween);
                     if (index !== -1) {
                         this.activeTweens.splice(index, 1);
