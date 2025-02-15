@@ -7,7 +7,7 @@ export class AceOfShadows {
     private stacks: { cards: PIXI.Graphics[]; locked: boolean }[]; 
     private tickerListener!: () => void;
     private activeTweens: gsap.core.Tween[] = []; 
-    private animationInterval: number = 1000;
+    private animationInterval: number = 100;
     private lastAnimationTime: number = 0; 
 
     constructor(app: PIXI.Application) {
@@ -27,9 +27,6 @@ export class AceOfShadows {
 
         const cardWidth = Math.min(100, this.app.screen.width * 0.08); 
         const cardHeight = Math.min(150, this.app.screen.height * 0.15); 
-
-        const paddingX = this.app.screen.width * 0.05;
-        const paddingY = this.app.screen.height * 0.05;
 
         const gapBetweenStacks = 20;
 
@@ -67,35 +64,45 @@ export class AceOfShadows {
     private animateCards() {
         this.tickerListener = () => {
             const now = Date.now();
-
+    
             if (now - this.lastAnimationTime < this.animationInterval) return;
             this.lastAnimationTime = now;
-
+    
+            // Find a source stack with cards
             let sourceIndex = Math.floor(Math.random() * this.stacks.length);
             while (this.stacks[sourceIndex].locked || this.stacks[sourceIndex].cards.length === 0) {
                 sourceIndex = Math.floor(Math.random() * this.stacks.length);
             }
             const sourceStack = this.stacks[sourceIndex];
-
+    
+            // Pop a card from the source stack
             const card = sourceStack.cards.pop();
             if (!card) return;
-
+    
+            // Find a target stack that is not the source stack and not locked
             let targetIndex = Math.floor(Math.random() * this.stacks.length);
             while (targetIndex === sourceIndex || this.stacks[targetIndex].locked) {
                 targetIndex = Math.floor(Math.random() * this.stacks.length);
             }
             const targetStack = this.stacks[targetIndex];
-
+    
+            // Lock the target stack during the animation
             targetStack.locked = true;
-
-            const overlapFactor = 0.1; 
+    
+            // Calculate the target position
+            const overlapFactor = 0.1;
             const targetPosition = {
-                x: this.stacks[targetIndex].cards[0].x, 
-                y: this.stacks[targetIndex].cards[0].y + targetStack.cards.length * (card.height * overlapFactor),
+                x: targetStack.cards.length > 0
+                    ? targetStack.cards[0].x // Use the x position of the first card in the target stack
+                    : card.x, // Use the x position of the card if the target stack is empty
+                y: targetStack.cards.length > 0
+                    ? targetStack.cards[0].y + targetStack.cards.length * (card.height * overlapFactor) // Stack on top of existing cards
+                    : card.y, // Use the y position of the card if the target stack is empty
             };
-
+    
+            // Animate the card to the target position
             const tween = gsap.to(card, {
-                duration: 2, 
+                duration: 0.1,
                 x: targetPosition.x,
                 y: targetPosition.y,
                 ease: 'power1.inOut',
@@ -105,17 +112,18 @@ export class AceOfShadows {
                 onComplete: () => {
                     targetStack.cards.push(card);
                     targetStack.locked = false;
-
+    
+                    // Remove the tween from the active tweens list
                     const index = this.activeTweens.indexOf(tween);
                     if (index !== -1) {
                         this.activeTweens.splice(index, 1);
                     }
                 },
             });
-
+    
             this.activeTweens.push(tween);
         };
-
+    
         this.app.ticker.add(this.tickerListener);
     }
 
