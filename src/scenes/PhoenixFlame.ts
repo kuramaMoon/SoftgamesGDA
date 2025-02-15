@@ -9,18 +9,18 @@ export class PhoenixFlame {
     private animatedFires: PIXI.AnimatedSprite[];
     private fireCircles: PIXI.Graphics[]; 
     private maxAnimatedFires: number = 5; 
-    private maxFireCircles: number = 5; 
-    private tickerListener!: () => void; 
+    private maxFireCircles: number = 5;
+    private tickerListener!: () => void;
 
     constructor(app: PIXI.Application) {
         if (PhoenixFlame.instance) {
-            PhoenixFlame.instance.destroy(); 
+            PhoenixFlame.instance.destroy();
         }
         PhoenixFlame.instance = this; 
 
         this.app = app;
         this.container = new PIXI.Container();
-        this.app.stage.addChild(this.container);
+        this.app.stage.addChild(this.container); 
         this.animatedFires = [];
         this.fireCircles = [];
 
@@ -57,9 +57,10 @@ export class PhoenixFlame {
     private initAnimatedFires() {
         const positions = [
             { x: this.app.screen.width * 0.30, y: this.app.screen.height - 260 }, 
-            { x: this.app.screen.width * 0.70, y: this.app.screen.height - 260 },
-            { x: this.app.screen.width * 0.4, y: this.app.screen.height - 260 }, 
+            { x: this.app.screen.width * 0.70, y: this.app.screen.height - 260 }, 
+            { x: this.app.screen.width * 0.4, y: this.app.screen.height - 260 },  
             { x: this.app.screen.width * 0.6, y: this.app.screen.height - 260 },  
+            { x: this.app.screen.width * 0.5, y: this.app.screen.height - 260 }, 
         ];
 
         for (let i = 0; i < this.maxAnimatedFires; i++) {
