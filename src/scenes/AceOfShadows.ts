@@ -1,134 +1,145 @@
-// aceOfShadows.ts
 import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
 
 export class AceOfShadows {
     private app: PIXI.Application;
-    private stacks: PIXI.Graphics[][]; // Array of stacks, each containing 12 cards
+    private container: PIXI.Container;
+    private stacks: { cards: PIXI.Graphics[]; locked: boolean }[]; 
+    private tickerListener!: () => void;
+    private activeTweens: gsap.core.Tween[] = []; 
+    private animationInterval: number = 1000;
+    private lastAnimationTime: number = 0; 
 
     constructor(app: PIXI.Application) {
         this.app = app;
         this.stacks = [];
-        // Set a dark background for better contrast
-        this.app.renderer.background.color = 0x000000; // Black background
+        this.container = new PIXI.Container();
+        this.app.stage.addChild(this.container); 
+
+        this.app.renderer.background.color = 0x000000; 
         this.initStacks();
         this.animateCards();
     }
 
     private initStacks() {
-        const numStacks = 12; // Number of stacks
-        const cardsPerStack = 12; // Number of cards per stack
-    
-        // Make card sizes responsive based on screen dimensions
-        const cardWidth = Math.min(100, this.app.screen.width * 0.08); // Adjusted width
-        const cardHeight = Math.min(150, this.app.screen.height * 0.15); // Adjusted height
-    
-        // Padding around the screen edges
+        const numStacks = 12; 
+        const cardsPerStack = 12; 
+
+        const cardWidth = Math.min(100, this.app.screen.width * 0.08); 
+        const cardHeight = Math.min(150, this.app.screen.height * 0.15); 
+
         const paddingX = this.app.screen.width * 0.05;
         const paddingY = this.app.screen.height * 0.05;
-    
-        // Minimum distance between stacks (to prevent overlap)
-        const minDistance = Math.max(cardWidth, cardHeight) * 1.5;
-    
-        // Array to store stack positions for collision detection
-        const stackPositions: { x: number; y: number }[] = [];
-    
+
+        const gapBetweenStacks = 20;
+
+        const totalWidth = numStacks * cardWidth + (numStacks - 1) * gapBetweenStacks;
+
+        const startX = (this.app.screen.width - totalWidth) / 2;
+        const startY = (this.app.screen.height - cardHeight) / 2;
+
         for (let i = 0; i < numStacks; i++) {
-            let stackPosition: { x: number; y: number } = { x: 0, y: 0 }; // Initialize with default values
-            let isValidPosition = false;
-    
-            // Retry mechanism to find a valid position
-            while (!isValidPosition) {
-                // Generate a random position within the screen bounds
-                stackPosition = {
-                    x: Math.random() * (this.app.screen.width - cardWidth - 2 * paddingX) + paddingX,
-                    y: Math.random() * (this.app.screen.height - cardHeight - 2 * paddingY) + paddingY,
-                };
-    
-                // Check for collisions with existing stacks
-                isValidPosition = true;
-                for (const pos of stackPositions) {
-                    const distance = Math.hypot(stackPosition.x - pos.x, stackPosition.y - pos.y);
-                    if (distance < minDistance) {
-                        isValidPosition = false;
-                        break;
-                    }
-                }
-            }
-    
-            // Add the valid position to the list
-            stackPositions.push(stackPosition);
-    
-            // Create the stack of cards
+            const stackX = startX + i * (cardWidth + gapBetweenStacks);
+
             const stack: PIXI.Graphics[] = [];
             for (let j = 0; j < cardsPerStack; j++) {
                 const card = new PIXI.Graphics();
-                // Set the border style
-                card.lineStyle(2, 0xFFFFFF, 1); // White border with thickness 2
-                // Use vibrant colors for the cards
+
+                card.lineStyle(2, 0x686868, 1); 
                 const color = this.getRandomCardColor();
                 card.beginFill(color);
                 card.drawRect(0, 0, cardWidth, cardHeight);
                 card.endFill();
-    
-                // Position the cards in the stack with overlap
-                card.x = stackPosition.x;
-                card.y = stackPosition.y + j * (cardHeight * 0.1); // Overlap cards slightly
+
+                const overlapFactor = 0.1; 
+                card.x = stackX;
+                card.y = startY + j * (cardHeight * overlapFactor);
                 card.scale.set(1);
-    
-                // Add the card to the stage (ensures proper rendering order)
-                this.app.stage.addChild(card);
+
+                this.container.addChild(card);
                 stack.push(card);
+
             }
-            this.stacks.push(stack);
+            this.stacks.push({ cards: stack, locked: false });
         }
     }
 
     private animateCards() {
-        setInterval(() => {
-            // Randomly select a source stack
-            const sourceIndex = Math.floor(Math.random() * this.stacks.length);
-            const sourceStack = this.stacks[sourceIndex];
-            if (sourceStack.length === 0) return; // Skip if the stack is empty
+        this.tickerListener = () => {
+            const now = Date.now();
 
-            // Remove the top card from the source stack
-            const card = sourceStack.pop();
+            if (now - this.lastAnimationTime < this.animationInterval) return;
+            this.lastAnimationTime = now;
+
+            let sourceIndex = Math.floor(Math.random() * this.stacks.length);
+            while (this.stacks[sourceIndex].locked || this.stacks[sourceIndex].cards.length === 0) {
+                sourceIndex = Math.floor(Math.random() * this.stacks.length);
+            }
+            const sourceStack = this.stacks[sourceIndex];
+
+            const card = sourceStack.cards.pop();
             if (!card) return;
 
-            // Randomly select a target stack (not the same as the source stack)
             let targetIndex = Math.floor(Math.random() * this.stacks.length);
-            while (targetIndex === sourceIndex) {
+            while (targetIndex === sourceIndex || this.stacks[targetIndex].locked) {
                 targetIndex = Math.floor(Math.random() * this.stacks.length);
             }
             const targetStack = this.stacks[targetIndex];
 
-            // Calculate the target position
+            targetStack.locked = true;
+
+            const overlapFactor = 0.1; 
             const targetPosition = {
-                x: this.stacks[targetIndex][0].x,
-                y: this.stacks[targetIndex][0].y + targetStack.length * (card.height * 0.1), // Overlap cards slightly
+                x: this.stacks[targetIndex].cards[0].x, 
+                y: this.stacks[targetIndex].cards[0].y + targetStack.cards.length * (card.height * overlapFactor),
             };
 
-            // Animate the card moving to the target stack
-            gsap.to(card, {
-                duration: 2, // Animation takes 2 seconds
+            const tween = gsap.to(card, {
+                duration: 2, 
                 x: targetPosition.x,
                 y: targetPosition.y,
                 ease: 'power1.inOut',
+                onStart: () => {
+                    this.container.addChild(card);
+                },
                 onComplete: () => {
-                    targetStack.push(card); // Add the card to the target stack
+                    targetStack.cards.push(card);
+                    targetStack.locked = false;
+
+                    const index = this.activeTweens.indexOf(tween);
+                    if (index !== -1) {
+                        this.activeTweens.splice(index, 1);
+                    }
                 },
             });
-        }, 1000); // Move a card every second
+
+            this.activeTweens.push(tween);
+        };
+
+        this.app.ticker.add(this.tickerListener);
+    }
+
+    public destroy() {
+
+        if (this.tickerListener) {
+            this.app.ticker.remove(this.tickerListener);
+        }
+
+        this.activeTweens.forEach((tween) => tween.kill());
+        this.activeTweens = [];
+        this.app.stage.removeChild(this.container);
+        this.container.destroy({ children: true });
+        this.stacks = [];
     }
 
     private getRandomCardColor(): number {
         const colors = [
-            0xFF4500, // Orange-Red
-            0xFFA500, // Orange
-            0xFFD700, // Gold
-            0xFFFF00, // Yellow
-            0xFFFFFF, // White
-            0xFF8000, // Indian Red
+            0xFF4500, 
+            0xFFA500, 
+            0xFFD700,
+            0xFFFF00, 
+            0xFFFFFF,
+            0xFF8000, 
         ];
         return colors[Math.floor(Math.random() * colors.length)];
     }
