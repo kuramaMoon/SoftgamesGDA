@@ -13,14 +13,12 @@ export class MagicWords {
     private dialogueBoxHeight: number;
     private maxScrollY: number = 0;
     private scrollOffset: number = 0; // Track scroll offset for content scrolling
-    private lastScrollPosition: number = 0; // Track the last user scroll position
-    private scrollbarHandle: PIXI.Graphics; // Initialized in constructor
+
 
     constructor(app: PIXI.Application) {
         this.app = app;
         this.container = new PIXI.Container();
         this.dialogueContainer = new PIXI.Container();
-        this.scrollbarHandle = new PIXI.Graphics(); // Initialize scrollbarHandle
 
         this.containerWidth = this.app.screen.width - (this.leftIndent * this.app.screen.width) - (this.app.screen.width * 0.25);
         this.dialogueBoxHeight = this.app.screen.height - 150;
@@ -60,7 +58,16 @@ export class MagicWords {
         let startY = 0;
         let startScrollOffset = 0;
 
+        console.log('Setting up scroll on dialogueContainer', {
+            interactive: this.dialogueContainer.interactive,
+            hitArea: this.dialogueContainer.hitArea,
+            position: { x: this.dialogueContainer.x, y: this.dialogueContainer.y },
+            children: this.dialogueContainer.children.length,
+            maxScrollY: this.maxScrollY
+        });
+
         this.dialogueContainer.on('pointerdown', (event: PIXI.FederatedPointerEvent) => {
+            console.log('Pointer down at', event.global.y);
             isDragging = true;
             startY = event.global.y;
             startScrollOffset = this.scrollOffset;
@@ -68,6 +75,7 @@ export class MagicWords {
 
         this.dialogueContainer.on('pointermove', (event: PIXI.FederatedPointerEvent) => {
             if (!isDragging) return;
+            console.log('Pointer moving at', event.global.y);
 
             const currentY = event.global.y;
             const deltaY = currentY - startY;
@@ -78,20 +86,21 @@ export class MagicWords {
 
             this.scrollOffset = newOffset;
             this.applyScrollOffset();
-            this.lastScrollPosition = newOffset; // Update last scroll position
-            this.updateScrollbar(); // Sync scrollbar
         });
 
         this.dialogueContainer.on('pointerup', (event: PIXI.FederatedPointerEvent) => {
+            console.log('Pointer up at', event.global.y);
             isDragging = false;
         });
 
         this.dialogueContainer.on('pointerupoutside', (event: PIXI.FederatedPointerEvent) => {
+            console.log('Pointer up outside at', event.global.y);
             isDragging = false;
         });
 
         // Improved mouse wheel scrolling, using PIXI.FederatedWheelEvent
         this.dialogueContainer.on('wheel', (event: PIXI.FederatedWheelEvent) => {
+            console.log('Wheel event, deltaY:', event.deltaY, 'Global position:', event.global);
             event.stopPropagation(); // Prevent event bubbling if needed
 
             // Normalize deltaY for consistent scrolling across devices
@@ -105,8 +114,6 @@ export class MagicWords {
 
             this.scrollOffset = newOffset;
             this.applyScrollOffset();
-            this.lastScrollPosition = newOffset; // Update last scroll position
-            this.updateScrollbar(); // Sync scrollbar
         });
 
         // Add scrollbar
@@ -114,48 +121,33 @@ export class MagicWords {
     }
 
     private setupScrollbar() {
-        const scrollbarWidth = 20; // Increased width for a more prominent slider
+        const scrollbarWidth = 10; // Width of the scrollbar
         const scrollbarHeight = this.dialogueBoxHeight - 20; // Height, accounting for padding
         const scrollbarX = this.leftIndent * this.app.screen.width + this.containerWidth + 5; // Positioned to the right of the chat
         const scrollbarY = 60; // Start at the top of the dialogue box
 
-        // Create scrollbar background (track)
+        // Create scrollbar background
         const scrollbarBg = new PIXI.Graphics();
-        scrollbarBg.beginFill(0xffffff, 0.2); // White with 20% opacity for visibility against dark background
-        scrollbarBg.drawRoundedRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight, 10); // Larger rounding for better visibility
+        scrollbarBg.beginFill(0x666666, 0.5);
+        scrollbarBg.drawRoundedRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight, 5);
         scrollbarBg.endFill();
         this.container.addChild(scrollbarBg);
 
         // Calculate handle size based on content height
-        const contentHeight = this.getContentHeight(); // Use custom method to calculate content height
+        const contentHeight = this.dialogueContainer.height;
         const visibleHeight = this.dialogueBoxHeight;
-        const handleHeight = Math.max(30, (visibleHeight / contentHeight) * scrollbarHeight || 30); // Minimum 30px for usability, handle case where contentHeight might be 0
+        const handleHeight = Math.max(20, (visibleHeight / contentHeight) * scrollbarHeight); // Minimum 20px for usability
         const maxHandleY = scrollbarHeight - handleHeight;
 
-        // Create scrollbar handle (slider)
-        this.scrollbarHandle.clear(); // Clear existing graphics
-        this.scrollbarHandle.beginFill(0xffffff, 0.6); // White with 60% opacity for high contrast (testing visibility)
-        this.scrollbarHandle.drawRoundedRect(scrollbarX, scrollbarY, scrollbarWidth, handleHeight, 10); // Match track rounding
-        this.scrollbarHandle.endFill();
-        this.scrollbarHandle.interactive = true;
-        this.scrollbarHandle.cursor = 'pointer'; // Set cursor to pointer for draggable indication
-        this.scrollbarHandle.hitArea = new PIXI.Rectangle(scrollbarX, scrollbarY, scrollbarWidth, handleHeight); // Explicitly set hit area
-        this.scrollbarHandle.visible = true; // Explicitly ensure handle is visible
-        this.container.addChild(this.scrollbarHandle); // Ensure handle is added to the stage
+        // Reassign scrollbarHandle (already initialized in constructor)
 
         let isDraggingHandle = false;
         let startHandleY = 0;
         let startScrollOffset = 0;
 
-        this.scrollbarHandle.on('pointerdown', (event: PIXI.FederatedPointerEvent) => {
-            console.log('Scrollbar handle dragged at', event.global.y); // Add minimal log for debugging
-            isDraggingHandle = true;
-            startHandleY = this.scrollbarHandle.y;
-            startScrollOffset = this.scrollOffset;
-        });
 
-        // Attach scrollbar dragging to scrollbarHandle directly for precise control
-        this.scrollbarHandle.on('pointermove', (event: PIXI.FederatedPointerEvent) => {
+        // Attach scrollbar dragging to dialogueContainer for broader event coverage
+        this.dialogueContainer.on('pointermove', (event: PIXI.FederatedPointerEvent) => {
             if (!isDraggingHandle) return;
 
             const currentY = event.global.y;
@@ -164,7 +156,6 @@ export class MagicWords {
 
             newHandleY = Math.max(scrollbarY, Math.min(scrollbarY + maxHandleY, newHandleY));
 
-            this.scrollbarHandle.y = newHandleY;
 
             // Map handle position to scrollOffset
             const scrollRatio = (newHandleY - scrollbarY) / maxHandleY;
@@ -173,25 +164,21 @@ export class MagicWords {
 
             this.scrollOffset = newOffset;
             this.applyScrollOffset();
-            this.lastScrollPosition = newOffset; // Update last scroll position
         });
 
-        this.scrollbarHandle.on('pointerup', (event: PIXI.FederatedPointerEvent) => {
+        this.dialogueContainer.on('pointerup', (event: PIXI.FederatedPointerEvent) => {
             if (isDraggingHandle) {
-                console.log('Scrollbar handle released'); // Add minimal log for debugging
+                console.log('Scrollbar handle released');
                 isDraggingHandle = false;
             }
         });
 
-        this.scrollbarHandle.on('pointerupoutside', (event: PIXI.FederatedPointerEvent) => {
+        this.dialogueContainer.on('pointerupoutside', (event: PIXI.FederatedPointerEvent) => {
             if (isDraggingHandle) {
-                console.log('Scrollbar handle released outside'); // Add minimal log for debugging
+                console.log('Scrollbar handle released outside');
                 isDraggingHandle = false;
             }
         });
-
-        // Initial sync
-        this.updateScrollbar();
     }
 
     private applyScrollOffset() {
@@ -205,56 +192,20 @@ export class MagicWords {
     }
 
     private updateScrollBounds() {
-        const contentHeight = this.getContentHeight(); // Use custom method to calculate content height
+        const contentHeight = this.dialogueContainer.height;
         this.maxScrollY = Math.max(0, contentHeight - this.dialogueBoxHeight + 20);
-        console.log('Max scroll Y:', this.maxScrollY, 'Content height:', contentHeight, 'Box height:', this.dialogueBoxHeight, 'Children:', this.dialogueContainer.children.length);
+        console.log('Max scroll Y:', this.maxScrollY, 'Content height:', contentHeight, 'Box height:', this.dialogueBoxHeight, 'Children:', this.dialogueContainer.children.length, 'Interactive:', this.dialogueContainer.interactive, 'Scroll offset:', this.scrollOffset);
         
         // Ensure dialogueContainer remains interactive after updates
         this.dialogueContainer.interactive = true;
         this.applyScrollOffset(); // Reapply scroll offset to update positions
-        this.updateScrollbar(); // Sync scrollbar after bounds update
-    }
-
-    private updateScrollbar() {
-        const scrollbarHeight = this.dialogueBoxHeight - 20;
-        const scrollbarY = 60;
-        const scrollbarX = this.leftIndent * this.app.screen.width + this.containerWidth + 5; // Restore x position
-        const contentHeight = this.getContentHeight(); // Use custom method to calculate content height
-        const visibleHeight = this.dialogueBoxHeight;
-        const handleHeight = Math.max(30, (visibleHeight / contentHeight) * scrollbarHeight || 30); // Minimum 30px, handle case where contentHeight might be 0
-        console.log('Updating scrollbar handle height:', { contentHeight, visibleHeight, scrollbarHeight, handleHeight });
-        const maxHandleY = scrollbarHeight - handleHeight;
-
-        const scrollRatio = -this.scrollOffset / this.maxScrollY; // Use scrollOffset for ratio
-        const newHandleY = scrollbarY + (maxHandleY * scrollRatio);
-        this.scrollbarHandle.clear(); // Clear before redrawing to ensure visibility
-        this.scrollbarHandle.beginFill(0xffffff, 0.6); // White with 60% opacity for high contrast
-        this.scrollbarHandle.drawRoundedRect(scrollbarX, newHandleY, 20, handleHeight, 10); // Redraw with updated height and restored x position
-        this.scrollbarHandle.endFill();
-        this.scrollbarHandle.interactive = true;
-        this.scrollbarHandle.cursor = 'pointer'; // Set cursor to pointer for draggable indication
-        this.scrollbarHandle.visible = true; // Explicitly ensure handle is visible
-        this.scrollbarHandle.hitArea = new PIXI.Rectangle(scrollbarX, newHandleY, 20, handleHeight); // Update hit area with new position and size
-    }
-
-    private getContentHeight(): number {
-        if (this.dialogueContainer.children.length === 0) return this.dialogueBoxHeight;
-
-        let maxY = 0;
-        this.dialogueContainer.children.forEach((child) => {
-            if (child instanceof PIXI.Container) {
-                const childY = child.y + (child.height || 0); // Use child’s height if available
-                maxY = Math.max(maxY, childY);
-            }
-        });
-        console.log('Calculated content height:', maxY, 'Children count:', this.dialogueContainer.children.length);
-        return maxY;
     }
 
     private async fetchDialogue() {
         try {
             const response = await fetch('https://private-624120-softgamesassignment.apiary-mock.com/v2/magicwords');
             const data = await response.json();
+            console.log('Fetched dialogue data:', data);
 
             data.emojies.forEach((emoji: any) => {
                 this.emojiMap[`{${emoji.name}}`] = emoji.url;
@@ -277,6 +228,7 @@ export class MagicWords {
     }
 
     private displayDialogue(dialogue: { name?: string; text: string }[]) {
+        console.log('Displaying dialogue:', dialogue);
         this.dialogueContainer.removeChildren();
         this.currentIndex = 0;
         this.scrollOffset = 0; // Reset scroll offset when resetting dialogue
@@ -285,6 +237,7 @@ export class MagicWords {
     }
 
     private showNextMessage(dialogue: { name?: string; text: string }[]) {
+        console.log('Current index:', this.currentIndex, 'Dialogue length:', dialogue.length);
         if (this.currentIndex >= dialogue.length) {
             this.updateScrollBounds();
             return;
@@ -301,10 +254,13 @@ export class MagicWords {
     }
 
     private renderDialogueLine(line: { name?: string; text: string }) {
+        console.log('Rendering line:', line, 'Current children count:', this.dialogueContainer.children.length);
+
         const { name, text } = line;
         const characterName = name || "Unknown";
 
         const avatarData = this.avatars[characterName] || { url: this.defaultAvatarUrl, position: 'right' };
+        console.log(avatarData);
         const isLeft = avatarData.position === 'left';
 
         const TEXT_PADDING = this.app.screen.width * 0.008;
@@ -376,9 +332,7 @@ export class MagicWords {
     private scrollToBottom() {
         // Always scroll to the bottom by setting scrollOffset to show the latest message
         this.scrollOffset = -this.maxScrollY;
-        this.lastScrollPosition = this.scrollOffset; // Update last scroll position
         this.applyScrollOffset();
-        this.updateScrollbar(); // Sync scrollbar
     }
 
     public destroy() {
