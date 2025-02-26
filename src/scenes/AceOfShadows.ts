@@ -7,7 +7,7 @@ export class AceOfShadows {
     private stacks: { cards: PIXI.Graphics[]; locked: boolean }[]; 
     private tickerListener!: () => void;
     private activeTweens: gsap.core.Tween[] = []; 
-    private animationInterval: number = 100;
+    private animationInterval: number = 1000;
     private lastAnimationTime: number = 0; 
 
     constructor(app: PIXI.Application) {
@@ -96,7 +96,7 @@ export class AceOfShadows {
             };
     
             const tween = gsap.to(card, {
-                duration: 0.1,
+                duration: 2,
                 x: targetPosition.x,
                 y: targetPosition.y,
                 ease: 'power1.inOut',
