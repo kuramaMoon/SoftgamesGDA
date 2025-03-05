@@ -25,8 +25,8 @@ export class AceOfShadows {
         const numStacks = 12; 
         const cardsPerStack = 12; 
 
-        const cardWidth = Math.min(100, this.app.screen.width * 0.08); 
-        const cardHeight = Math.min(150, this.app.screen.height * 0.15); 
+        const cardWidth = this.app.screen.width * 0.065 
+        const cardHeight = this.app.screen.height * 0.16 
 
         const gapBetweenStacks = 20;
 

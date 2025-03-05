@@ -12,7 +12,7 @@ export class MagicWords {
     private defaultAvatarUrl = './public/assets/images/avatar.png';
     private dialogueBoxHeight: number;
     private maxScrollY: number = 0;
-    private scrollOffset: number = 0; // Track scroll offset for content scrolling
+    private scrollOffset: number = 0; 
 
 
     constructor(app: PIXI.Application) {
@@ -36,11 +36,10 @@ export class MagicWords {
         this.container.addChild(mask);
         this.dialogueContainer.mask = mask;
 
-        this.dialogueContainer.y = 60; // Keep container fixed at y = 60
+        this.dialogueContainer.y = 60; 
         this.container.addChild(this.dialogueContainer);
         this.app.stage.addChild(this.container);
 
-        // Ensure dialogueContainer is fully interactive and hit-testable
         this.dialogueContainer.interactive = true;
         this.dialogueContainer.hitArea = new PIXI.Rectangle(
             this.leftIndent * this.app.screen.width,
@@ -81,8 +80,8 @@ export class MagicWords {
             const deltaY = currentY - startY;
             let newOffset = startScrollOffset + deltaY;
 
-            newOffset = Math.min(0, newOffset); // Top bound (no scrolling above top)
-            newOffset = Math.max(-this.maxScrollY, newOffset); // Bottom bound
+            newOffset = Math.min(0, newOffset);
+            newOffset = Math.max(-this.maxScrollY, newOffset); 
 
             this.scrollOffset = newOffset;
             this.applyScrollOffset();
@@ -98,66 +97,54 @@ export class MagicWords {
             isDragging = false;
         });
 
-        // Improved mouse wheel scrolling, using PIXI.FederatedWheelEvent
         this.dialogueContainer.on('wheel', (event: PIXI.FederatedWheelEvent) => {
-            console.log('Wheel event, deltaY:', event.deltaY, 'Global position:', event.global);
-            event.stopPropagation(); // Prevent event bubbling if needed
+            event.stopPropagation();
 
-            // Normalize deltaY for consistent scrolling across devices
             const normalizedDelta = Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY), 100);
-            const scrollSpeed = 5; // Reduced for smoother scrolling
+            const scrollSpeed = 5; 
             let newOffset = this.scrollOffset - (normalizedDelta * scrollSpeed) / 10;
 
-            // Constrain within bounds
-            newOffset = Math.min(0, newOffset); // Top bound (no scrolling above top)
-            newOffset = Math.max(-this.maxScrollY, newOffset); // Bottom bound
+            newOffset = Math.min(0, newOffset);
+            newOffset = Math.max(-this.maxScrollY, newOffset);
 
             this.scrollOffset = newOffset;
             this.applyScrollOffset();
         });
 
-        // Add scrollbar
         this.setupScrollbar();
     }
 
     private setupScrollbar() {
-        const scrollbarWidth = 10; // Width of the scrollbar
-        const scrollbarHeight = this.dialogueBoxHeight - 20; // Height, accounting for padding
-        const scrollbarX = this.leftIndent * this.app.screen.width + this.containerWidth + 5; // Positioned to the right of the chat
-        const scrollbarY = 60; // Start at the top of the dialogue box
+        const scrollbarWidth = 10; 
+        const scrollbarHeight = this.dialogueBoxHeight - 20;
+        const scrollbarX = this.leftIndent * this.app.screen.width + this.containerWidth + 5; 
+        const scrollbarY = 60; 
 
-        // Create scrollbar background
         const scrollbarBg = new PIXI.Graphics();
         scrollbarBg.beginFill(0x666666, 0.5);
         scrollbarBg.drawRoundedRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight, 5);
         scrollbarBg.endFill();
         this.container.addChild(scrollbarBg);
 
-        // Calculate handle size based on content height
         const contentHeight = this.dialogueContainer.height;
         const visibleHeight = this.dialogueBoxHeight;
-        const handleHeight = Math.max(20, (visibleHeight / contentHeight) * scrollbarHeight); // Minimum 20px for usability
+        const handleHeight = Math.max(20, (visibleHeight / contentHeight) * scrollbarHeight); 
         const maxHandleY = scrollbarHeight - handleHeight;
-
-        // Reassign scrollbarHandle (already initialized in constructor)
 
         let isDraggingHandle = false;
         let startHandleY = 0;
         let startScrollOffset = 0;
 
 
-        // Attach scrollbar dragging to dialogueContainer for broader event coverage
         this.dialogueContainer.on('pointermove', (event: PIXI.FederatedPointerEvent) => {
             if (!isDraggingHandle) return;
 
             const currentY = event.global.y;
-            const deltaY = currentY - (startHandleY - startScrollOffset); // Adjust for initial offset
+            const deltaY = currentY - (startHandleY - startScrollOffset); 
             let newHandleY = startHandleY + deltaY;
 
             newHandleY = Math.max(scrollbarY, Math.min(scrollbarY + maxHandleY, newHandleY));
 
-
-            // Map handle position to scrollOffset
             const scrollRatio = (newHandleY - scrollbarY) / maxHandleY;
             const scrollRange = this.maxScrollY;
             const newOffset = -(scrollRatio * scrollRange);
@@ -182,10 +169,9 @@ export class MagicWords {
     }
 
     private applyScrollOffset() {
-        // Apply scroll offset to all children of dialogueContainer
         this.dialogueContainer.children.forEach((child) => {
             if (child instanceof PIXI.Container) {
-                const initialY = (child as any).initialY || 0; // Use type assertion for initialY
+                const initialY = (child as any).initialY || 0;
                 child.y = initialY + this.scrollOffset;
             }
         });
@@ -194,18 +180,14 @@ export class MagicWords {
     private updateScrollBounds() {
         const contentHeight = this.dialogueContainer.height;
         this.maxScrollY = Math.max(0, contentHeight - this.dialogueBoxHeight + 20);
-        console.log('Max scroll Y:', this.maxScrollY, 'Content height:', contentHeight, 'Box height:', this.dialogueBoxHeight, 'Children:', this.dialogueContainer.children.length, 'Interactive:', this.dialogueContainer.interactive, 'Scroll offset:', this.scrollOffset);
-        
-        // Ensure dialogueContainer remains interactive after updates
         this.dialogueContainer.interactive = true;
-        this.applyScrollOffset(); // Reapply scroll offset to update positions
+        this.applyScrollOffset(); 
     }
 
     private async fetchDialogue() {
         try {
             const response = await fetch('https://private-624120-softgamesassignment.apiary-mock.com/v2/magicwords');
             const data = await response.json();
-            console.log('Fetched dialogue data:', data);
 
             data.emojies.forEach((emoji: any) => {
                 this.emojiMap[`{${emoji.name}}`] = emoji.url;
@@ -218,26 +200,18 @@ export class MagicWords {
             this.displayDialogue(data.dialogue || []);
         } catch (error) {
             console.error('Error fetching dialogue:', error);
-            // Fallback: Use dummy data for testing
-            this.displayDialogue([
-                { name: "TestUser", text: "Testing message 1 after API fail" },
-                { name: "TestUser", text: "Testing message 2 after API fail" },
-                { name: "TestUser", text: "Testing message 3 after API fail" }, // Add more for testing
-            ]);
         }
     }
 
     private displayDialogue(dialogue: { name?: string; text: string }[]) {
-        console.log('Displaying dialogue:', dialogue);
         this.dialogueContainer.removeChildren();
         this.currentIndex = 0;
-        this.scrollOffset = 0; // Reset scroll offset when resetting dialogue
-        this.updateScrollBounds(); // Recalculate bounds after resetting
+        this.scrollOffset = 0; 
+        this.updateScrollBounds(); 
         this.showNextMessage(dialogue);
     }
 
     private showNextMessage(dialogue: { name?: string; text: string }[]) {
-        console.log('Current index:', this.currentIndex, 'Dialogue length:', dialogue.length);
         if (this.currentIndex >= dialogue.length) {
             this.updateScrollBounds();
             return;
@@ -250,45 +224,134 @@ export class MagicWords {
 
         setTimeout(() => {
             this.showNextMessage(dialogue);
-        }, 1000); // Adjust timing if messages are skipped
+        }, 1000); 
     }
 
     private renderDialogueLine(line: { name?: string; text: string }) {
         console.log('Rendering line:', line, 'Current children count:', this.dialogueContainer.children.length);
-
+    
         const { name, text } = line;
         const characterName = name || "Unknown";
-
+    
         const avatarData = this.avatars[characterName] || { url: this.defaultAvatarUrl, position: 'right' };
-        console.log(avatarData);
         const isLeft = avatarData.position === 'left';
-
+    
         const TEXT_PADDING = this.app.screen.width * 0.008;
         const MAX_MESSAGE_WIDTH = this.containerWidth * 0.6;
-
+        const EMOJI_SIZE = this.app.screen.width * 0.015;
+        const EMOJI_PADDING = EMOJI_SIZE * 0.2; 
+        const EMOJI_RIGHT_PADDING = EMOJI_SIZE * 0.2; 
+    
+        const DEFAULT_EMOJI_URL = './public/assets/images/avatar.png';
+    
         const textStyle = new PIXI.TextStyle({
             fontFamily: 'Arial',
-            fontSize: this.app.screen.width * 0.015,
+            fontSize: EMOJI_SIZE,
             fill: 0xffffff,
             wordWrap: true,
             wordWrapWidth: MAX_MESSAGE_WIDTH - TEXT_PADDING * 2,
         });
-
-        const measuredText = PIXI.TextMetrics.measureText(text, textStyle);
-        const MESSAGE_WIDTH = Math.min(measuredText.width, MAX_MESSAGE_WIDTH);
-        const MESSAGE_HEIGHT = measuredText.height;
-
-        const GAP_PERCENTAGE = 0.15; // Increased for more spacing, ensuring content grows
+    
+        const textContainer = new PIXI.Container();
+        textContainer.interactive = true;
+    
+        const emojiRegex = /\{([a-zA-Z0-9_]+)\}/g;
+        let processedText = text;
+        const emojiReplacements: { original: string, url: string, index: number }[] = [];
+    
+        processedText = processedText.replace(emojiRegex, (match, emojiName) => {
+            const fullMarker = `{${emojiName}}`;
+            let emojiUrl = this.emojiMap[fullMarker];
+            console.log('Emoji Match:', { match, emojiName, fullMarker, emojiUrl });
+    
+            const index = processedText.indexOf(match);
+    
+            if (!emojiUrl) {
+                console.warn(`Emoji not found in emojiMap: ${fullMarker}, using default smile emoji`);
+                emojiUrl = DEFAULT_EMOJI_URL;
+            }
+    
+            emojiReplacements.push({ original: match, url: emojiUrl, index });
+            return '   '; 
+        });
+    
+        const baseText = new PIXI.Text(processedText, textStyle);
+        console.log('Processed Text:', processedText);
+        textContainer.addChild(baseText);
+    
+        emojiReplacements.sort((a, b) => a.index - b.index);
+    
+        // Measure the base text to position emojis
+        const textMetrics = PIXI.TextMetrics.measureText(processedText, textStyle);
+        const lineHeight = textMetrics.lineHeight || EMOJI_SIZE; 
+        console.log('Text Metrics:', textMetrics, 'Line Height:', lineHeight);
+    
+        // Position each emoji
+        emojiReplacements.forEach((emojiData, i) => {
+            console.log('Processing Emoji:', emojiData);
+            const emojiSprite = PIXI.Sprite.from(emojiData.url);
+            console.log('Emoji Sprite Created:', { url: emojiData.url, sprite: emojiSprite });
+    
+            if (emojiSprite.texture && !emojiSprite.texture.baseTexture.valid) {
+                console.warn('Emoji texture not valid for URL:', emojiData.url);
+                emojiSprite.texture.on('update', () => {
+                    if (emojiSprite.texture.baseTexture.valid) {
+                        emojiSprite.width = EMOJI_SIZE;
+                        emojiSprite.height = EMOJI_SIZE;
+                        this.positionEmoji(emojiSprite, 0, 0, EMOJI_PADDING, EMOJI_RIGHT_PADDING, lineHeight, EMOJI_SIZE, textContainer);
+                    }
+                });
+                return;
+            }
+    
+            emojiSprite.width = EMOJI_SIZE;
+            emojiSprite.height = EMOJI_SIZE;
+    
+            const textBeforeEmoji = processedText.substring(0, emojiData.index);
+            const metricsBefore = PIXI.TextMetrics.measureText(textBeforeEmoji, textStyle);
+    
+            const linesBefore = metricsBefore.lines || [];
+            const lineIndex = linesBefore.length - 1; 
+            const currentY = lineIndex * lineHeight;
+    
+            const lastLineText = linesBefore[lineIndex] || '';
+            const placeholderLength = '   '.length;
+    
+            let textOnCurrentLineBeforeEmoji = lastLineText;
+            if (lastLineText.endsWith('   ')) {
+                textOnCurrentLineBeforeEmoji = lastLineText.substring(0, lastLineText.length - placeholderLength).trimEnd();
+            }
+    
+            const metricsOnCurrentLine = PIXI.TextMetrics.measureText(textOnCurrentLineBeforeEmoji, textStyle);
+            const currentX = metricsOnCurrentLine.width || 0;
+    
+            console.log('Positioning Emoji:', {
+                lineIndex,
+                currentX,
+                currentY,
+                textBeforeEmoji,
+                lastLineText,
+                textOnCurrentLineBeforeEmoji,
+                metricsOnCurrentLine,
+            });
+    
+            this.positionEmoji(emojiSprite, currentX, currentY, EMOJI_PADDING, EMOJI_RIGHT_PADDING, lineHeight, EMOJI_SIZE, textContainer);
+        });
+    
+        const MESSAGE_WIDTH = Math.min(textContainer.width, MAX_MESSAGE_WIDTH);
+        const MESSAGE_HEIGHT = textMetrics.height;
+    
+        const GAP_PERCENTAGE = 0.15;
         const yOffset = this.dialogueContainer.children.length * (this.app.screen.height * GAP_PERCENTAGE);
-
-        const messageContainer = new PIXI.Container() as any; // Use type assertion for initialY
-        messageContainer.initialY = yOffset; // Store initial Y position for scrolling
-        messageContainer.y = yOffset + this.scrollOffset; // Apply current scroll offset
-
+    
+        const messageContainer = new PIXI.Container() as any;
+        messageContainer.initialY = yOffset;
+        messageContainer.y = yOffset + this.scrollOffset;
+    
         const avatarSprite = PIXI.Sprite.from(avatarData.url);
         avatarSprite.width = this.app.screen.width * 0.05;
         avatarSprite.height = this.app.screen.width * 0.05;
-
+    
         if (isLeft) {
             avatarSprite.x = 0;
             messageContainer.x = this.leftIndent * this.app.screen.width;
@@ -296,41 +359,44 @@ export class MagicWords {
             avatarSprite.x = MESSAGE_WIDTH + avatarSprite.width;
             messageContainer.x = this.leftIndent * this.app.screen.width + this.containerWidth - MESSAGE_WIDTH - avatarSprite.width * 2 - TEXT_PADDING;
         }
-
+    
         messageContainer.addChild(avatarSprite);
-
+    
         const bubble = new PIXI.Graphics();
         bubble.beginFill(isLeft ? 0x1e88e5 : 0x555555, 1);
-        bubble.interactive = true; // Ensure bubbles are interactive for event propagation
-
+        bubble.interactive = true;
+    
         if (isLeft) {
             bubble.drawRoundedRect(avatarSprite.width, 0, MESSAGE_WIDTH + TEXT_PADDING * 2, MESSAGE_HEIGHT + TEXT_PADDING * 2, 15);
         } else {
             bubble.drawRoundedRect(avatarSprite.width - TEXT_PADDING * 3, 0, MESSAGE_WIDTH + TEXT_PADDING * 2, MESSAGE_HEIGHT + TEXT_PADDING * 2, 15);
         }
-
+    
         bubble.endFill();
         messageContainer.addChild(bubble);
-
-        const dialogueText = new PIXI.Text(text, textStyle);
-        dialogueText.interactive = true; // Ensure text is interactive for event propagation
+    
         if (isLeft) {
-            dialogueText.x = avatarSprite.width + TEXT_PADDING;
-            dialogueText.y = TEXT_PADDING;
+            textContainer.x = avatarSprite.width + TEXT_PADDING;
+            textContainer.y = TEXT_PADDING;
         } else {
-            dialogueText.x = avatarSprite.width - TEXT_PADDING * 2;
-            dialogueText.y = TEXT_PADDING;
+            textContainer.x = avatarSprite.width - TEXT_PADDING * 2;
+            textContainer.y = TEXT_PADDING;
         }
-        bubble.addChild(dialogueText);
-
+        bubble.addChild(textContainer);
+    
         this.dialogueContainer.addChild(messageContainer);
-
+    
         this.updateScrollBounds();
-        this.scrollToBottom(); // Always scroll to bottom for new messages
+        this.scrollToBottom();
     }
-
+    
+    private positionEmoji(emojiSprite: PIXI.Sprite, currentX: number, currentY: number, emojiLeftPadding: number, emojiRightPadding: number, lineHeight: number, emojiSize: number, textContainer: PIXI.Container) {
+        emojiSprite.x = currentX + emojiLeftPadding;
+        emojiSprite.y = currentY + (lineHeight - emojiSize) / 2;
+        textContainer.addChild(emojiSprite);
+    }
+    
     private scrollToBottom() {
-        // Always scroll to the bottom by setting scrollOffset to show the latest message
         this.scrollOffset = -this.maxScrollY;
         this.applyScrollOffset();
     }

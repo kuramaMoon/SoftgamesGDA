@@ -7,9 +7,9 @@ export class PhoenixFlame {
     private app: PIXI.Application;
     private container: PIXI.Container; 
     private animatedFires: PIXI.AnimatedSprite[];
-    private fireCircles: PIXI.Graphics[]; 
+    private fireCircles: { particle: PIXI.Graphics, delay: number, currentDelay: number }[]; 
     private maxAnimatedFires: number = 5; 
-    private maxFireCircles: number = 5;
+    private maxFireCircles: number = 20;
     private tickerListener!: () => void;
 
     constructor(app: PIXI.Application) {
@@ -83,7 +83,7 @@ export class PhoenixFlame {
         for (let i = 0; i < this.maxFireCircles; i++) {
             const particle = new PIXI.Graphics();
 
-            const radius = 10 + Math.random() * 15; 
+            const radius = 10 + Math.random() * 10; 
             particle.beginFill(this.getRandomFireColor());
             particle.drawCircle(0, 0, radius); 
             particle.endFill();
@@ -97,29 +97,41 @@ export class PhoenixFlame {
             particle.scale.set(1); 
 
             this.container.addChild(particle);
-            this.fireCircles.push(particle);
+            
+            const delay = Math.random() * 60; 
+            this.fireCircles.push({ particle, delay, currentDelay: delay });
         }
     }
 
     private animateParticles() {
         this.tickerListener = () => {
-            this.fireCircles.forEach((particle) => {
-                particle.y -= Math.random() * 5 + 2; 
-                particle.x += (Math.random() - 0.5) * 4; 
+            this.fireCircles.forEach((fireCircle) => {
+                const { particle, delay, currentDelay } = fireCircle;
 
-                particle.alpha -= 0.01;
-                particle.scale.set(particle.scale.x * 0.98);
+                
+                fireCircle.currentDelay -= 1;
 
-                if (particle.alpha <= 0 || particle.y < 0) {
-                    particle.y = this.app.screen.height - 250; 
-                    particle.x = this.getFireLikeSpawnPosition(this.app.screen.width);
-                    particle.alpha = 1;
-                    particle.scale.set(1); 
-                    particle.clear(); 
-                    const radius = 10 + Math.random() * 15;
-                    particle.beginFill(this.getRandomFireColor());
-                    particle.drawCircle(0, 0, radius); 
-                    particle.endFill();
+               
+                if (fireCircle.currentDelay <= 0) {
+                    particle.y -= Math.random() * 5 + 2; 
+                    particle.x += (Math.random() - 0.5) * 4; 
+
+                    particle.alpha -= 0.01;
+                    particle.scale.set(particle.scale.x * 0.98);
+
+                    if (particle.alpha <= 0 || particle.y < 0) {
+                        particle.y = this.app.screen.height - 250; 
+                        particle.x = this.getFireLikeSpawnPosition(this.app.screen.width);
+                        particle.alpha = 1;
+                        particle.scale.set(1); 
+                        particle.clear(); 
+                        const radius = 10 + Math.random() * 10;
+                        particle.beginFill(this.getRandomFireColor());
+                        particle.drawCircle(0, 0, radius); 
+                        particle.endFill();
+                        
+                        fireCircle.currentDelay = delay;
+                    }
                 }
             });
         };
@@ -128,8 +140,8 @@ export class PhoenixFlame {
     }
 
     private getFireLikeSpawnPosition(screenWidth: number): number {
-        const center = screenWidth / 2;
-        const spread = screenWidth / 3.75;
+        const center = screenWidth / 2 + screenWidth * 0.07;
+        const spread = screenWidth / 4 ;
         const random1 = Math.random();
         const random2 = Math.random();
         const offset = (random1 + random2 - 1) * spread;
